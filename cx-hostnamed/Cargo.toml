@@ -1,0 +1,12 @@
+[package]
+name = "cx-hostnamed"
+version = "0.1.0"
+authors = ["Greg V <greg@unrelenting.technology>"]
+edition = "2018"
+
+[dependencies]
+cxutil = "*"
+nix = "0"
+os-release = "0"
+zbus = "1"
+zbus_polkit = "1"

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD polkit Policy Configuration 1.0//EN" "http://www.freedesktop.org/software/polkit/policyconfig-1.dtd">
+<policyconfig>
+
+	<vendor>complexd</vendor>
+	<vendor_url>https://github.com/DankBSD/complexd</vendor_url>
+
+	<action id="org.freedesktop.hostname1.set-hostname">
+		<description>Set current hostname.</description>
+		<message>Setting the current hostname requires authentication.</message>
+		<defaults>
+			<allow_any>auth_admin_keep</allow_any>
+			<allow_inactive>auth_admin_keep</allow_inactive>
+			<allow_active>auth_admin_keep</allow_active>
+		</defaults>
+	</action>
+
+	<action id="org.freedesktop.hostname1.set-static-hostname">
+		<description>Set static hostname.</description>
+		<message>Setting the static (persistent) hostname requires authentication.</message>
+		<defaults>
+			<allow_any>auth_admin_keep</allow_any>
+			<allow_inactive>auth_admin_keep</allow_inactive>
+			<allow_active>auth_admin_keep</allow_active>
+		</defaults>
+	</action>
+
+	<action id="org.freedesktop.hostname1.set-machine-info">
+		<description>Set machine information.</description>
+		<message>Setting machine information requires authentication.</message>
+		<defaults>
+			<allow_any>auth_admin_keep</allow_any>
+			<allow_inactive>auth_admin_keep</allow_inactive>
+			<allow_active>auth_admin_keep</allow_active>
+		</defaults>
+	</action>
+
+	<action id="org.freedesktop.hostname1.get-product-uuid">
+		<description gettext-domain="systemd">Get product UUID</description>
+		<message gettext-domain="systemd">Authentication is required to get product UUID.</message>
+		<defaults>
+			<allow_any>auth_admin_keep</allow_any>
+			<allow_inactive>auth_admin_keep</allow_inactive>
+			<allow_active>auth_admin_keep</allow_active>
+		</defaults>
+	</action>
+
+</policyconfig>

@@ -1,0 +1,22 @@
+[workspace]
+members = [
+	"cxutil",
+	"cx-hostnamed",
+]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+lto = "thin"
+opt-level = "s"
+panic = "abort"
+
+[patch.crates-io]
+cxutil = { path = "cxutil" }
+
+zbus            = { git = "https://gitlab.freedesktop.org/myfreeweb/zbus.git", branch = "freebsd" }
+zvariant        = { git = "https://gitlab.freedesktop.org/myfreeweb/zbus.git", branch = "freebsd" }
+zvariant_derive = { git = "https://gitlab.freedesktop.org/myfreeweb/zbus.git", branch = "freebsd" }
+zbus_macros     = { git = "https://gitlab.freedesktop.org/myfreeweb/zbus.git", branch = "freebsd" }
+zbus_polkit     = { git = "https://gitlab.freedesktop.org/myfreeweb/zbus.git", branch = "freebsd" }

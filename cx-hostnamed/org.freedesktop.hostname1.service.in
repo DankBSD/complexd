@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.freedesktop.hostname1
+Exec=@LIBEXEC@/cx-hostnamed
+User=root
