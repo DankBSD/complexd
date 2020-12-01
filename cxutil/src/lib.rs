@@ -3,11 +3,11 @@ use toml_edit::Document;
 use zbus_polkit::policykit1 as pk;
 
 pub fn rc_toml_key_str(key: &'static str, fallback: Option<&'static str>) -> Option<String> {
-    let rctoml = std::fs::read("/etc/rc.toml").ok()?;
+    let rctoml = std::fs::read("/system.toml").ok()?;
     match String::from_utf8_lossy(&rctoml).parse::<Document>() {
         Ok(tree) => tree[key].as_str().or(fallback).map(|o| o.to_string()),
         Err(e) => {
-            eprintln!("Could not parse /etc/rc.toml: {}", e);
+            eprintln!("Could not parse /system.toml: {}", e);
             None
         }
     }
