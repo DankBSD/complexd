@@ -179,7 +179,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         zbus::fdo::RequestNameFlags::ReplaceExisting.into(),
     )?;
     let mut object_server = zbus::ObjectServer::new(&connection);
-    object_server.at(&"/org/freedesktop/hostname1".try_into()?, Hostname1 { auth })?;
+    object_server.at("/org/freedesktop/hostname1", Hostname1 { auth })?;
     loop {
         if let Err(err) = object_server.try_handle_next() {
             eprintln!("{}", err);

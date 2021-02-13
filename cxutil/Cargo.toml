@@ -6,5 +6,5 @@ edition = "2018"
 
 [dependencies]
 toml_edit = { git = "https://github.com/ironyman/toml_edit", branch = "dotted2" }
-zbus = "1"
-zbus_polkit = "1"
+zbus            = { git = "https://gitlab.freedesktop.org/dbus/zbus.git" }
+zbus_polkit     = { git = "https://gitlab.freedesktop.org/dbus/zbus.git" }

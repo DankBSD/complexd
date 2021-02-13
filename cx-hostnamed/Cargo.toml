@@ -8,5 +8,5 @@ edition = "2018"
 cxutil = "*"
 nix = "0"
 os-release = "0"
-zbus = "1"
-zbus_polkit = "1"
+zbus            = { git = "https://gitlab.freedesktop.org/dbus/zbus.git" }
+zbus_polkit     = { git = "https://gitlab.freedesktop.org/dbus/zbus.git" }
