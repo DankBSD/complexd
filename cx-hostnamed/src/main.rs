@@ -1,6 +1,31 @@
-use cxutil::{pk_check, rc_toml_key_str};
-use std::{convert::TryInto, error::Error};
+use cxutil::pk_check;
+use std::{error::Error, fs};
 use zbus_polkit::policykit1 as pk;
+
+fn auto_chassis() -> Option<String> {
+    // TODO: detect virtualization
+    #[cfg(target_os = "freebsd")]
+    if let Some(c) = cxutil::get_kenv(cstr::cstr!("smbios.chassis.type")) {
+        return match c.as_str() {
+            "Desktop"
+            | "Low Profile Desktop"
+            | "Pizza Box"
+            | "Mini Tower"
+            | "Tower"
+            | "All in One"
+            | "Sealed-case PC"
+            | "Mini PC"
+            | "Stick PC" => Some("desktop".to_owned()),
+            "Portable" | "Laptop" | "Notebook" | "Sub Notebook" => Some("laptop".to_owned()),
+            "Hand Held" => Some("handset".to_owned()),
+            "Main Server Chassis" | "Blade" | "Blade Enclosure" => Some("server".to_owned()),
+            "Tablet" => Some("tablet".to_owned()),
+            "Convertible" | "Detachable" => Some("convertible".to_owned()),
+            _ => None,
+        };
+    }
+    None
+}
 
 struct Hostname1 {
     auth: pk::AuthorityProxy<'static>,
@@ -27,10 +52,9 @@ impl Hostname1 {
 
     #[dbus_interface(property, name = "StaticHostname")]
     fn get_static_hostname(&self) -> String {
-        rc_toml_key_str("hostname", Some("")).unwrap_or_else(|| "unknown".to_string())
-        // TODO: /usr/local/etc/runit/hostname
-        // TODO: /etc/runit/hostname
-        // TODO: /etc/hostname
+        fs::read_to_string("/etc/hostname")
+            .map(|s| s.trim_end().to_owned())
+            .unwrap_or_else(|_| "unknown".to_owned())
     }
 
     fn set_static_hostname(
@@ -40,13 +64,13 @@ impl Hostname1 {
         interactive: bool,
     ) -> zbus::fdo::Result<()> {
         pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-static-hostname")?;
-        Err(zbus::fdo::Error::NotSupported("TODO".to_string()))
+        fs::write("/etc/hostname", hostname).map_err(|e| zbus::fdo::Error::Failed(e.to_string()))
     }
 
     #[dbus_interface(property, name = "PrettyHostname")]
     fn get_pretty_hostname(&self) -> String {
-        rc_toml_key_str("pretty_hostname", Some("")).unwrap_or_else(|| "unknown".to_string())
         // TODO: /etc/machine-info
+        "TODO".to_owned()
     }
 
     fn set_pretty_hostname(
@@ -61,9 +85,10 @@ impl Hostname1 {
 
     #[dbus_interface(property, name = "IconName")]
     fn get_icon_name(&self) -> String {
-        rc_toml_key_str("icon_name", Some("")).unwrap_or_else(|| "".to_string())
         // TODO: /etc/machine-info
-        // TODO: chassis data
+        auto_chassis()
+            .map(|s| format!("computer-{}", s))
+            .unwrap_or_else(|| "computer".to_string())
     }
 
     fn set_icon_name(&self, #[zbus(header)] hdr: zbus::MessageHeader, icon: &str, interactive: bool) -> zbus::fdo::Result<()> {
@@ -73,9 +98,8 @@ impl Hostname1 {
 
     #[dbus_interface(property, name = "Chassis")]
     fn get_chassis(&self) -> String {
-        rc_toml_key_str("chassis", Some("")).unwrap_or_else(|| "".to_string())
         // TODO: /etc/machine-info
-        // TODO: dmidecode -s chassis-type
+        auto_chassis().unwrap_or_else(|| "".to_string())
     }
 
     fn set_chassis(&self, #[zbus(header)] hdr: zbus::MessageHeader, chassis: &str, interactive: bool) -> zbus::fdo::Result<()> {
@@ -85,9 +109,8 @@ impl Hostname1 {
 
     #[dbus_interface(property, name = "Deployment")]
     fn get_deployment(&self) -> String {
-        rc_toml_key_str("chassis", Some("")).unwrap_or_else(|| "".to_string())
         // TODO: /etc/machine-info
-        // TODO: dmidecode -s chassis-type
+        "TODO".to_owned()
     }
 
     fn set_deployment(
@@ -102,8 +125,8 @@ impl Hostname1 {
 
     #[dbus_interface(property, name = "Location")]
     fn get_location(&self) -> String {
-        rc_toml_key_str("location", Some("")).unwrap_or_else(|| "".to_string())
         // TODO: /etc/machine-info
+        "TODO".to_owned()
     }
 
     fn set_location(

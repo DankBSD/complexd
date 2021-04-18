@@ -1,16 +1,26 @@
 use std::collections::HashMap;
-use toml_edit::Document;
 use zbus_polkit::policykit1 as pk;
 
-pub fn rc_toml_key_str(key: &'static str, fallback: Option<&'static str>) -> Option<String> {
-    let rctoml = std::fs::read("/system.toml").ok()?;
-    match String::from_utf8_lossy(&rctoml).parse::<Document>() {
-        Ok(tree) => tree[key].as_str().or(fallback).map(|o| o.to_string()),
-        Err(e) => {
-            eprintln!("Could not parse /system.toml: {}", e);
-            None
-        }
+#[cfg(target_os = "freebsd")]
+pub fn get_kenv(key: &std::ffi::CStr) -> Option<String> {
+    extern "C" {
+        fn kenv(act: libc::c_int, nam: *const libc::c_uchar, val: *mut libc::c_uchar, len: libc::c_int) -> libc::c_int;
     }
+    let mut val: [libc::c_uchar; 129] = [0; 129];
+    let mut len = unsafe {
+        kenv(
+            /* KENV_GET */ 0,
+            key.as_ptr() as *const _,
+            &mut val[0],
+            /* KENV_MVALLEN + 1 */ 129,
+        )
+    };
+    if len > 0 {
+        return std::ffi::CStr::from_bytes_with_nul(&val[0..len as usize])
+            .ok()
+            .map(|s| s.to_string_lossy().into_owned());
+    }
+    None
 }
 
 #[must_use = "use ? to perform the check"]
