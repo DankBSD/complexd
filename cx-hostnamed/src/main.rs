@@ -1,5 +1,6 @@
 use cxutil::pk_check;
-use std::{error::Error, fs};
+use smol::{block_on, fs, spawn};
+use std::error::Error;
 use zbus_polkit::policykit1 as pk;
 
 fn auto_chassis() -> Option<String> {
@@ -28,7 +29,7 @@ fn auto_chassis() -> Option<String> {
 }
 
 struct Hostname1 {
-    auth: pk::AuthorityProxy<'static>,
+    auth: pk::AsyncAuthorityProxy<'static>,
 }
 
 #[zbus::dbus_interface(name = "org.freedesktop.hostname1")]
@@ -40,46 +41,49 @@ impl Hostname1 {
         hostname_cstr.to_str().unwrap().to_string()
     }
 
-    fn set_hostname(
+    async fn set_hostname<'m>(
         &self,
-        #[zbus(header)] hdr: zbus::MessageHeader,
+        #[zbus(header)] hdr: zbus::MessageHeader<'m>,
         hostname: &str,
         interactive: bool,
     ) -> zbus::fdo::Result<()> {
-        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-hostname")?;
+        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-hostname").await?;
         nix::unistd::sethostname(hostname).map_err(|e| zbus::fdo::Error::Failed(e.to_string()))
     }
 
     #[dbus_interface(property, name = "StaticHostname")]
-    fn get_static_hostname(&self) -> String {
+    async fn get_static_hostname(&self) -> String {
         fs::read_to_string("/etc/hostname")
+            .await
             .map(|s| s.trim_end().to_owned())
             .unwrap_or_else(|_| "unknown".to_owned())
     }
 
-    fn set_static_hostname(
+    async fn set_static_hostname<'m>(
         &self,
-        #[zbus(header)] hdr: zbus::MessageHeader,
+        #[zbus(header)] hdr: zbus::MessageHeader<'m>,
         hostname: &str,
         interactive: bool,
     ) -> zbus::fdo::Result<()> {
-        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-static-hostname")?;
-        fs::write("/etc/hostname", hostname).map_err(|e| zbus::fdo::Error::Failed(e.to_string()))
+        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-static-hostname").await?;
+        fs::write("/etc/hostname", hostname)
+            .await
+            .map_err(|e| zbus::fdo::Error::Failed(e.to_string()))
     }
 
     #[dbus_interface(property, name = "PrettyHostname")]
-    fn get_pretty_hostname(&self) -> String {
+    async fn get_pretty_hostname(&self) -> String {
         // TODO: /etc/machine-info
         "TODO".to_owned()
     }
 
-    fn set_pretty_hostname(
+    async fn set_pretty_hostname<'m>(
         &self,
-        #[zbus(header)] hdr: zbus::MessageHeader,
+        #[zbus(header)] hdr: zbus::MessageHeader<'m>,
         hostname: &str,
         interactive: bool,
     ) -> zbus::fdo::Result<()> {
-        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info")?;
+        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info").await?;
         Err(zbus::fdo::Error::NotSupported("TODO".to_string()))
     }
 
@@ -91,8 +95,13 @@ impl Hostname1 {
             .unwrap_or_else(|| "computer".to_string())
     }
 
-    fn set_icon_name(&self, #[zbus(header)] hdr: zbus::MessageHeader, icon: &str, interactive: bool) -> zbus::fdo::Result<()> {
-        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info")?;
+    async fn set_icon_name<'m>(
+        &self,
+        #[zbus(header)] hdr: zbus::MessageHeader<'m>,
+        icon: &str,
+        interactive: bool,
+    ) -> zbus::fdo::Result<()> {
+        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info").await?;
         Err(zbus::fdo::Error::NotSupported("TODO".to_string()))
     }
 
@@ -102,8 +111,13 @@ impl Hostname1 {
         auto_chassis().unwrap_or_else(|| "".to_string())
     }
 
-    fn set_chassis(&self, #[zbus(header)] hdr: zbus::MessageHeader, chassis: &str, interactive: bool) -> zbus::fdo::Result<()> {
-        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info")?;
+    async fn set_chassis<'m>(
+        &self,
+        #[zbus(header)] hdr: zbus::MessageHeader<'m>,
+        chassis: &str,
+        interactive: bool,
+    ) -> zbus::fdo::Result<()> {
+        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info").await?;
         Err(zbus::fdo::Error::NotSupported("TODO".to_string()))
     }
 
@@ -113,13 +127,13 @@ impl Hostname1 {
         "TODO".to_owned()
     }
 
-    fn set_deployment(
+    async fn set_deployment<'m>(
         &self,
-        #[zbus(header)] hdr: zbus::MessageHeader,
+        #[zbus(header)] hdr: zbus::MessageHeader<'m>,
         deployment: &str,
         interactive: bool,
     ) -> zbus::fdo::Result<()> {
-        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info")?;
+        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info").await?;
         Err(zbus::fdo::Error::NotSupported("TODO".to_string()))
     }
 
@@ -129,13 +143,13 @@ impl Hostname1 {
         "TODO".to_owned()
     }
 
-    fn set_location(
+    async fn set_location<'m>(
         &self,
-        #[zbus(header)] hdr: zbus::MessageHeader,
+        #[zbus(header)] hdr: zbus::MessageHeader<'m>,
         location: &str,
         interactive: bool,
     ) -> zbus::fdo::Result<()> {
-        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info")?;
+        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.set-machine-info").await?;
         Err(zbus::fdo::Error::NotSupported("TODO".to_string()))
     }
 
@@ -183,29 +197,35 @@ impl Hostname1 {
     }
 
     #[dbus_interface(name = "GetProductUUID")]
-    fn get_product_uuid(
+    async fn get_product_uuid<'m>(
         &self,
-        #[zbus(header)] hdr: zbus::MessageHeader,
+        #[zbus(header)] hdr: zbus::MessageHeader<'m>,
         location: &str,
         interactive: bool,
     ) -> zbus::fdo::Result<()> {
-        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.get-product-uuid")?;
+        pk_check(&self.auth, &hdr, interactive, "org.freedesktop.hostname1.get-product-uuid").await?;
         Err(zbus::fdo::Error::NotSupported("TODO".to_string()))
     }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let connection = zbus::Connection::new_system()?;
-    let auth = pk::AuthorityProxy::new(&connection)?;
-    zbus::fdo::DBusProxy::new(&connection)?.request_name(
-        "org.freedesktop.hostname1",
-        zbus::fdo::RequestNameFlags::ReplaceExisting.into(),
-    )?;
-    let mut object_server = zbus::ObjectServer::new(&connection);
-    object_server.at("/org/freedesktop/hostname1", Hostname1 { auth })?;
-    loop {
-        if let Err(err) = object_server.try_handle_next() {
-            eprintln!("{}", err);
+    block_on(async {
+        let conn = zbus::ConnectionBuilder::system()?.internal_executor(false).build().await?;
+        let con = conn.clone();
+        spawn(async move {
+            loop {
+                con.executor().tick().await
+            }
+        })
+        .detach();
+        let auth = pk::AsyncAuthorityProxy::new(&conn).await?;
+        {
+            let mut object_server = conn.object_server_mut().await;
+            object_server.at("/org/freedesktop/hostname1", Hostname1 { auth })?;
         }
-    }
+        conn.request_name("org.freedesktop.hostname1").await?;
+        loop {
+            std::thread::park();
+        }
+    })
 }

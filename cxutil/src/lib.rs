@@ -7,7 +7,7 @@ pub fn get_kenv(key: &std::ffi::CStr) -> Option<String> {
         fn kenv(act: libc::c_int, nam: *const libc::c_uchar, val: *mut libc::c_uchar, len: libc::c_int) -> libc::c_int;
     }
     let mut val: [libc::c_uchar; 129] = [0; 129];
-    let mut len = unsafe {
+    let len = unsafe {
         kenv(
             /* KENV_GET */ 0,
             key.as_ptr() as *const _,
@@ -24,9 +24,9 @@ pub fn get_kenv(key: &std::ffi::CStr) -> Option<String> {
 }
 
 #[must_use = "use ? to perform the check"]
-pub fn pk_check(
-    authority: &pk::AuthorityProxy,
-    hdr: &zbus::MessageHeader,
+pub async fn pk_check<'m>(
+    authority: &'m pk::AsyncAuthorityProxy<'static>,
+    hdr: &'m zbus::MessageHeader<'_>,
     interactive: bool,
     perm: &'static str,
 ) -> zbus::fdo::Result<()> {
@@ -34,7 +34,7 @@ pub fn pk_check(
         .check_authorization(
             &pk::Subject::new_for_message_header(hdr).map_err(|e| zbus::fdo::Error::Failed(e.to_string()))?,
             perm,
-            HashMap::new(),
+            &HashMap::new(),
             if interactive {
                 pk::CheckAuthorizationFlags::AllowUserInteraction.into()
             } else {
@@ -42,6 +42,7 @@ pub fn pk_check(
             },
             "",
         )
+        .await
         .map_err(|e| zbus::fdo::Error::Failed(e.to_string()))?;
     if !result.is_authorized {
         if !interactive || !result.is_challenge {

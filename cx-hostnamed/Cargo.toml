@@ -9,5 +9,6 @@ cxutil = "*"
 nix = "0"
 os-release = "0"
 cstr = "0"
+smol = "1"
 zbus            = { git = "https://gitlab.freedesktop.org/dbus/zbus.git", features = ["gvariant"] }
 zbus_polkit     = { git = "https://gitlab.freedesktop.org/dbus/zbus.git" }
