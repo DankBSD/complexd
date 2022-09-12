@@ -1,10 +1,169 @@
 use cxutil::pk_check;
 use smol::{block_on, fs, spawn};
 use std::error::Error;
+use std::fs::File;
+use std::io;
+use std::io::prelude::*;
+use std::path::Path;
 use zbus_polkit::policykit1 as pk;
 
-fn auto_chassis() -> Option<String> {
+fn devicetree_chassis_type() -> Option<String> {
+    let path = Path::new("/proc/device-tree/chassis-type");
+    return match File::open(&path) {
+        Err(err) => match err.kind() {
+            io::ErrorKind::NotFound => {
+                // debug
+                println!("device tree chassis type not found");
+                None
+            },
+            _ => {
+                println!("device tree chassis type could not be opened");
+                // warn
+                None
+            },
+        },
+        Ok(mut file) => {
+            let mut s = String::new();
+            match file.read_to_string(&mut s) {
+                Err(err) => {
+                    // warn
+                    println!("device tree chassis type could not be read");
+                    None
+                },
+                // Use device tree chassis name as-is
+                // https://github.com/devicetree-org/devicetree-specification/blob/master/source/chapter3-devicenodes.rst
+                Ok(_) => Some(s),
+            }
+        }
+    };
+}
+
+fn acpi_chassis_type() -> Option<String> {
+    let path = Path::new("/sys/firmware/acpi/pm_profile");
+    return match File::open(&path) {
+        Err(err) => match err.kind() {
+            io::ErrorKind::NotFound => {
+                println!("acpi chassis type not found");
+                // debug
+                None
+            },
+            _ => {
+                println!("failed to open acpi chassis type");
+                // warn
+                None
+            },
+        },
+        Ok(mut file) => {
+            let mut s = String::new();
+            match file.read_to_string(&mut s) {
+                Err(err) => {
+                    println!("failed to read acpi chassis type");
+                    // warn
+                    None
+                },
+                Ok(_) => {
+                    match s.trim_end().parse::<u32>() {
+                        Err(err) => {
+                            println!("failed to parse acpi chassis type");
+                            None
+                        },
+                        Ok(t) => match t {
+                            // See ACPI 5.0 Spec Section 5.2.9.1
+                            // http://www.acpi.info/DOWNLOADS/ACPIspec50.pdf
+                            1 | 3 | 6 => Some("desktop".to_owned()),
+                            2 => Some("laptop".to_owned()),
+                            4 | 5 | 7 => Some("server".to_owned()),
+                            8 => Some("tablet".to_owned()),
+                            _ => {
+                                println!("unknown acpi chassis type");
+                                // debug
+                                None
+                            },
+                        },
+                    }
+                }
+            }
+        }
+    };
+}
+
+fn dmi_chassis_type() -> Option<String> {
+    let path = Path::new("/sys/class/dmi/id/chassis_type");
+    return match File::open(&path) {
+        Err(err) => match err.kind() {
+            io::ErrorKind::NotFound => {
+                // debug
+                None
+            },
+            _ => {
+                // warn
+                None
+            },
+        },
+        Ok(mut file) => {
+            let mut s = String::new();
+            match file.read_to_string(&mut s) {
+                Err(err) => {
+                    // warn
+                    None
+                },
+                Ok(_) => {
+                    match s.trim_end().parse::<u32>() {
+                        Err(err) => {
+                            println!("failed to parse DMI chassis type");
+                            None
+                        },
+                        // See SMBIOS Specification 3.5.0 section 7.4.1
+                        // https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.5.0.pdf
+                        Ok(t) => match t {
+                            0x03 | 0x04 | 0x06 | 0x07 | 0x0D | 0x23 | 0x24 => Some("desktop".to_owned()),
+                            0x8 | 0x9 | 0xA | 0xE => Some("laptop".to_owned()),
+                            0xB => Some("handset".to_owned()),
+                            0x11 | 0x1C | 0x1D => Some("server".to_owned()),
+                            0x1E => Some("tablet".to_owned()),
+                            0x1F | 0x20 => Some("convertible".to_owned()),
+                            0x21 | 0x22 => Some("embedded".to_owned()),
+                            _ => {
+                                // debug
+                                None
+                            },
+                        },
+                    }
+                }
+            }
+        }
+    };
+}
+
+fn is_container() -> bool {
+    // TODO: detect containerization
+    false
+}
+
+fn is_vm() -> bool {
     // TODO: detect virtualization
+    false
+}
+
+fn auto_chassis() -> Option<String> {
+    if is_container() {
+        return Some("container".to_owned())
+    }
+    if is_vm() {
+        return Some("vm".to_owned())
+    }
+    #[cfg(target_os = "linux")]
+    if let Some(t) = devicetree_chassis_type() {
+        return Some(t);
+    }
+    #[cfg(target_os = "linux")]
+    if let Some(t) = acpi_chassis_type() {
+        return Some(t)
+    }
+    #[cfg(target_os = "linux")]
+    if let Some(t) = dmi_chassis_type() {
+        return Some(t)
+    }
     #[cfg(target_os = "freebsd")]
     if let Some(c) = cxutil::get_kenv(cstr::cstr!("smbios.chassis.type")) {
         return match c.as_str() {
